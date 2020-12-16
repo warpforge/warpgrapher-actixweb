@@ -1,0 +1,14 @@
+version: 1
+model:
+  - name: User
+    props:
+      - name: name
+        type: String
+  - name: Project
+    props:
+      - name: name
+        type: String
+    rels:
+      - name: users
+        nodes: [User]
+        list: true

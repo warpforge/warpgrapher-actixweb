@@ -7,6 +7,7 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use juniper::http::playground::playground_source;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fs::File;
 use std::sync::mpsc;
 use std::thread;
 use tokio::runtime::Runtime;
@@ -16,23 +17,6 @@ use warpgrapher::engine::config::{Configuration};
 use warpgrapher::engine::database::neo4j::Neo4jEndpoint;
 use warpgrapher::engine::database::DatabaseEndpoint;
 use warpgrapher::juniper::http::GraphQLRequest;
-
-static CONFIG: &'static str = "
-version: 1
-model:
-  - name: User
-    props:
-      - name: name
-        type: String
-  - name: Project
-    props:
-      - name: name
-        type: String
-    rels:
-      - name: users
-        nodes: [User]
-        list: true
-";
 
 #[derive(Clone)]
 struct AppData {
@@ -76,11 +60,7 @@ async fn graphiql(_data: Data<AppData>) -> impl Responder {
         .body(html)
 }
 
-fn create_engine() -> Engine<(), ()> {
-    // parse warpgrapher config
-    let config = Configuration::try_from(CONFIG.to_string())
-        .expect("Failed to parse CONFIG");
-
+fn create_engine(config: Configuration) -> Engine<(), ()> {
     // define database endpoint
     let db = Runtime::new()
         .expect("Expected tokio runtime.")
@@ -100,12 +80,25 @@ fn create_engine() -> Engine<(), ()> {
 }
 
 fn main() {
-    clap::App::new("warpgrapher-actixweb")
+    let matches = clap::App::new("warpgrapher-actixweb")
         .version("0.5.0")
         .about("Warpgrapher sample application using actix-web server")
-        .author("Warpgrapher");
+        .author("Warpgrapher")
+        .arg(
+            clap::Arg::with_name("CONFIG")
+                .help("Path to configuration file to use")
+                .required(true),
+        )
+        .get_matches();
 
-    let engine = create_engine();
+    let cfn = matches.value_of("CONFIG").expect("Configuration required.");
+
+    let config_file = File::open(cfn.to_string())
+          .expect("Could not read file");
+    let config = Configuration::try_from(config_file)
+          .expect("Failed to parse config file");
+
+    let engine = create_engine(config.clone());
 
     let graphql_endpoint = "/graphql";
     let playground_endpoint = "/graphiql";

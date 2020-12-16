@@ -7,6 +7,7 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use juniper::http::playground::playground_source;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use tokio::runtime::Runtime;
 
 use warpgrapher::{Engine};
 use warpgrapher::engine::config::{Configuration};
@@ -65,15 +66,19 @@ async fn graphiql(_data: Data<AppData>) -> impl Responder {
         .body(html)
 }
 
-async fn create_engine() -> Engine<(), ()> {
+fn create_engine() -> Engine<(), ()> {
     // parse warpgrapher config
     let config = Configuration::try_from(CONFIG.to_string())
         .expect("Failed to parse CONFIG");
 
     // define database endpoint
-    let db = Neo4jEndpoint::from_env()
-        .expect("Failed to parse endpoint from environment")
-        .pool().await
+    let db = Runtime::new()
+        .expect("Expected tokio runtime.")
+        .block_on(
+            Neo4jEndpoint::from_env()
+                .expect("Failed to parse endpoint from environment")
+                .pool()
+        )
         .expect("Failed to create database pool");
 
     // create warpgrapher engine
@@ -84,14 +89,13 @@ async fn create_engine() -> Engine<(), ()> {
     engine
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     clap::App::new("warpgrapher-actixweb")
-        .version("0.1")
+        .version("0.5.0")
         .about("Warpgrapher sample application using actix-web server")
         .author("Warpgrapher");
 
-    let engine = create_engine().await;
+    let engine = create_engine();
 
     let graphql_endpoint = "/graphql";
     let playground_endpoint = "/graphiql";
@@ -107,7 +111,7 @@ async fn main() {
         App::new()
             .data(app_data.clone())
             .wrap(Logger::default())
-            .wrap(Cors::default())
+            .wrap(Cors::permissive())
             .route(graphql_endpoint, web::post().to(graphql))
             .route(playground_endpoint, web::get().to(graphiql))
     })

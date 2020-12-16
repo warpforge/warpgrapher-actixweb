@@ -5,13 +5,31 @@ use actix_web::middleware::Logger;
 use actix_web::web::{Data, Json};
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use juniper::http::playground::playground_source;
-//use juniper::http::GraphQLRequest;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
-use warpgrapher::engine::Engine;
-use warpgrapher::engine::config::Config;
-use warpgrapher::engine::neo4j::Neo4jEndpoint;
+use warpgrapher::{Engine};
+use warpgrapher::engine::config::{Configuration};
+use warpgrapher::engine::database::neo4j::Neo4jEndpoint;
+use warpgrapher::engine::database::DatabaseEndpoint;
 use warpgrapher::juniper::http::GraphQLRequest;
+
+static CONFIG: &'static str = "
+version: 1
+model:
+  - name: User
+    props:
+      - name: name
+        type: String
+  - name: Project
+    props:
+      - name: name
+        type: String
+    rels:
+      - name: users
+        nodes: [User]
+        list: true
+";
 
 #[derive(Clone)]
 struct AppData {
@@ -27,7 +45,7 @@ impl AppData {
 async fn graphql(data: Data<AppData>, req: Json<GraphQLRequest>) -> Result<HttpResponse, Error> {
     let metadata: HashMap<String, String> = HashMap::new();
 
-    let resp = &data.engine.execute(req.into_inner(), metadata);
+    let resp = &data.engine.execute(&req.into_inner(), &metadata);
 
     match resp {
         Ok(body) => Ok(HttpResponse::Ok()
@@ -40,39 +58,40 @@ async fn graphql(data: Data<AppData>, req: Json<GraphQLRequest>) -> Result<HttpR
 }
 
 async fn graphiql(_data: Data<AppData>) -> impl Responder {
-    let html = playground_source(&"/graphql");
+    let html = playground_source(&"/graphql", None);
 
     HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(html)
 }
 
-#[allow(clippy::match_wild_err_arm)]
-fn main() {
-    let matches = clap::App::new("warpgrapher-actixweb")
+async fn create_engine() -> Engine<(), ()> {
+    // parse warpgrapher config
+    let config = Configuration::try_from(CONFIG.to_string())
+        .expect("Failed to parse CONFIG");
+
+    // define database endpoint
+    let db = Neo4jEndpoint::from_env()
+        .expect("Failed to parse endpoint from environment")
+        .pool().await
+        .expect("Failed to create database pool");
+
+    // create warpgrapher engine
+    let engine: Engine<(), ()> = Engine::new(config, db)
+        .build()
+        .expect("Failed to build engine");
+
+    engine
+}
+
+#[tokio::main]
+async fn main() {
+    clap::App::new("warpgrapher-actixweb")
         .version("0.1")
         .about("Warpgrapher sample application using actix-web server")
-        .author("Warpgrapher")
-        .arg(
-            clap::Arg::with_name("CONFIG")
-                .help("Path to configuration file to use")
-                .required(true),
-        )
-        .get_matches();
+        .author("Warpgrapher");
 
-    let cfn = matches.value_of("CONFIG").expect("Configuration required.");
-
-    let config = Config::from_file(cfn.to_string()).expect("Could not load config file");
-
-    let db = match Neo4jEndpoint::from_env("DB_URL") {
-        Ok(db) => db,
-        Err(_) => panic!("Unable to find Neo4jEndpoint"),
-    };
-
-    let engine = Engine::<(), ()>::new(config, db)
-        .with_version("1.0".to_string())
-        .build()
-        .expect("Could not create warpgrapher engine");
+    let engine = create_engine().await;
 
     let graphql_endpoint = "/graphql";
     let playground_endpoint = "/graphiql";

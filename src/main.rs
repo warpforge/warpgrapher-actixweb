@@ -60,7 +60,7 @@ async fn graphiql(_data: Data<AppData>) -> impl Responder {
         .body(html)
 }
 
-fn create_engine(config: Configuration) -> Engine<(), ()> {
+fn create_engine(config: Configuration) -> Engine<()> {
     // define database endpoint
     let db = Runtime::new()
         .expect("Expected tokio runtime.")
@@ -72,7 +72,7 @@ fn create_engine(config: Configuration) -> Engine<(), ()> {
         .expect("Failed to create database pool");
 
     // create warpgrapher engine
-    let engine: Engine<(), ()> = Engine::new(config, db)
+    let engine: Engine<()> = Engine::new(config, db)
         .build()
         .expect("Failed to build engine");
 
@@ -81,7 +81,7 @@ fn create_engine(config: Configuration) -> Engine<(), ()> {
 
 fn main() {
     let matches = clap::App::new("warpgrapher-actixweb")
-        .version("0.5.0")
+        .version("0.6.0")
         .about("Warpgrapher sample application using actix-web server")
         .author("Warpgrapher")
         .arg(

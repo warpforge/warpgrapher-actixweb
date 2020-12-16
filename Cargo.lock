@@ -3393,9 +3393,9 @@ dependencies = [
 
 [[package]]
 name = "warpgrapher"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cb5211fc4811d30a390faa41f70a65129b4ade42b4b58fddbb9021a6ab4fe89"
+checksum = "583d7f129e77b66246ef47dd07f7f43d2dcfbc5a540ebeae58eb25ff0d5d77d2"
 dependencies = [
  "Inflector",
  "async-trait",
@@ -3417,7 +3417,7 @@ dependencies = [
 
 [[package]]
 name = "warpgrapher-actixweb"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "actix 0.10.0",
  "actix-cors",

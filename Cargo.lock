@@ -3423,6 +3423,7 @@ dependencies = [
  "actix-cors",
  "actix-http",
  "actix-net",
+ "actix-rt",
  "actix-server-config",
  "actix-service",
  "actix-threadpool",

@@ -7,6 +7,8 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use juniper::http::playground::playground_source;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::sync::mpsc;
+use std::thread;
 use tokio::runtime::Runtime;
 
 use warpgrapher::{Engine};
@@ -44,11 +46,19 @@ impl AppData {
 }
 
 async fn graphql(data: Data<AppData>, req: Json<GraphQLRequest>) -> Result<HttpResponse, Error> {
-    let metadata: HashMap<String, String> = HashMap::new();
+    let (tx, rx) = mpsc::channel();
+    let engine = data.engine.clone();
 
-    let resp = &data.engine.execute(&req.into_inner(), &metadata);
+    thread::spawn(move || {
+        let metadata: HashMap<String, String> = HashMap::new();
 
-    match resp {
+        let resp = engine.execute(&req.into_inner(), &metadata);
+        let _ = tx.send(resp);
+     })
+    .join()
+    .expect("Thread panic");
+
+    match rx.recv().unwrap() {
         Ok(body) => Ok(HttpResponse::Ok()
             .content_type("application/json")
             .body(body.to_string())),

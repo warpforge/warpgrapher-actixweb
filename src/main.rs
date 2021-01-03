@@ -1,4 +1,3 @@
-use actix::System;
 use actix_cors::Cors;
 use actix_http::error::Error;
 use actix_web::middleware::Logger;
@@ -8,9 +7,6 @@ use juniper::http::playground::playground_source;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fs::File;
-use std::sync::mpsc;
-use std::thread;
-use tokio::runtime::Runtime;
 
 use warpgrapher::{Engine};
 use warpgrapher::engine::config::{Configuration};
@@ -30,19 +26,10 @@ impl AppData {
 }
 
 async fn graphql(data: Data<AppData>, req: Json<GraphQLRequest>) -> Result<HttpResponse, Error> {
-    let (tx, rx) = mpsc::channel();
-    let engine = data.engine.clone();
-
-    thread::spawn(move || {
-        let metadata: HashMap<String, String> = HashMap::new();
-
-        let resp = engine.execute(&req.into_inner(), &metadata);
-        let _ = tx.send(resp);
-     })
-    .join()
-    .expect("Thread panic");
-
-    match rx.recv().unwrap() {
+    let engine = &data.engine;
+    let metadata: HashMap<String, String> = HashMap::new();
+    let resp = engine.execute(&req.into_inner(), &metadata).await;
+    match resp {
         Ok(body) => Ok(HttpResponse::Ok()
             .content_type("application/json")
             .body(body.to_string())),
@@ -54,32 +41,25 @@ async fn graphql(data: Data<AppData>, req: Json<GraphQLRequest>) -> Result<HttpR
 
 async fn graphiql(_data: Data<AppData>) -> impl Responder {
     let html = playground_source(&"/graphql", None);
-
     HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(html)
 }
 
-fn create_engine(config: Configuration) -> Engine<()> {
-    // define database endpoint
-    let db = Runtime::new()
-        .expect("Expected tokio runtime.")
-        .block_on(
-            Neo4jEndpoint::from_env()
-                .expect("Failed to parse endpoint from environment")
-                .pool()
-        )
-        .expect("Failed to create database pool");
-
-    // create warpgrapher engine
+async fn create_engine(config: Configuration) -> Engine<()> {
+    let db = Neo4jEndpoint::from_env()
+        .expect("Failed to parse endpoint from environment")
+        .pool()
+        .await
+        .expect("Failed to create db endpoint");
     let engine: Engine<()> = Engine::new(config, db)
         .build()
         .expect("Failed to build engine");
-
     engine
 }
 
-fn main() {
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
     let matches = clap::App::new("warpgrapher-actixweb")
         .version("0.6.0")
         .about("Warpgrapher sample application using actix-web server")
@@ -98,7 +78,7 @@ fn main() {
     let config = Configuration::try_from(config_file)
           .expect("Failed to parse config file");
 
-    let engine = create_engine(config.clone());
+    let engine = create_engine(config.clone()).await;
 
     let graphql_endpoint = "/graphql";
     let playground_endpoint = "/graphiql";
@@ -106,10 +86,9 @@ fn main() {
     let bind_port = "5000".to_string();
     let addr = format!("{}:{}", bind_addr, bind_port);
 
-    let sys = System::new("warpgrapher-actixweb");
-
     let app_data = AppData::new(engine);
 
+    println!("Starting server on {}", addr);
     HttpServer::new(move || {
         App::new()
             .data(app_data.clone())
@@ -120,8 +99,6 @@ fn main() {
     })
     .bind(&addr)
     .expect("Failed to start server")
-    .run();
-
-    println!("Server available on: {:#?}", &addr);
-    let _ = sys.run();
+    .run()
+    .await
 }

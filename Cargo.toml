@@ -20,4 +20,4 @@ clap = "2.32.0"
 futures = "0.3.8"
 juniper = "0.15.1"
 tokio = {version="0.2.22", features=["full"]}
-warpgrapher = {path="/home/dev/projects/warpforge/warpgrapher", features=["neo4j"]}
+warpgrapher = { version="0.7.0", features=["neo4j"]}

@@ -61,7 +61,7 @@ async fn create_engine(config: Configuration) -> Engine<()> {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let matches = clap::App::new("warpgrapher-actixweb")
-        .version("0.6.0")
+        .version("0.7.0")
         .about("Warpgrapher sample application using actix-web server")
         .author("Warpgrapher")
         .arg(

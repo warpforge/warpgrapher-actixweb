@@ -1,16 +1,16 @@
 [package]
 name = "warpgrapher-actixweb"
-version = "0.9.0"
+version = "0.11.1"
 authors = ["dev"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-http = "3.0.0-beta.5"
-actix-web = "4.0.0-beta.6"
-actix-cors = "0.6.0-beta.2"
-clap = "3.0.11"
-serde = "1.0.135"
-serde_json = "1.0.78"
-warpgrapher = { version="0.9.0", features=["neo4j"]}
+actix-http = "3.1.0"
+actix-web = "4.1.0"
+actix-cors = "0.6.1"
+clap = "3.2.7"
+serde = "1.0.137"
+serde_json = "1.0.82"
+warpgrapher = { version="0.11.1", features=["cypher"]}

@@ -11,7 +11,7 @@ use std::fs::File;
 
 use warpgrapher::engine::config::Configuration;
 use warpgrapher::engine::context::RequestContext;
-use warpgrapher::engine::database::neo4j::Neo4jEndpoint;
+use warpgrapher::engine::database::cypher::CypherEndpoint;
 use warpgrapher::engine::database::DatabaseEndpoint;
 use warpgrapher::juniper::http::playground::playground_source;
 use warpgrapher::Engine;
@@ -31,7 +31,7 @@ impl AppData {
 struct Rctx {}
 
 impl RequestContext for Rctx {
-    type DBEndpointType = Neo4jEndpoint;
+    type DBEndpointType = CypherEndpoint;
 
     fn new() -> Self {
         Rctx {}
@@ -68,7 +68,7 @@ async fn playground(_data: Data<AppData>) -> impl Responder {
 }
 
 async fn create_engine(config: Configuration) -> Engine<Rctx> {
-    let db = Neo4jEndpoint::from_env()
+    let db = CypherEndpoint::from_env()
         .expect("Failed to parse endpoint from environment")
         .pool()
         .await

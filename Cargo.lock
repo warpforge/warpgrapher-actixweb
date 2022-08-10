@@ -996,9 +996,9 @@ dependencies = [
 
 [[package]]
 name = "juniper"
-version = "0.15.9"
+version = "0.15.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21ac55c9084d08a7e315d78e2b15b7cc220f5eb67413c6ebf6967ee5de3b69fc"
+checksum = "4f478f229a8ab52ff242f3250c8b3b8fe0a59b5b934f9706b7bdbc980991a7b6"
 dependencies = [
  "async-trait",
  "bson",
@@ -2260,9 +2260,9 @@ dependencies = [
 
 [[package]]
 name = "warpgrapher"
-version = "0.11.1"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82c7fdd6f17223eb84b32d428a0cf413271085b4ccf2ed5e8430ff3b670c0801"
+checksum = "379ef6a1c3a51c19c06c6a3bd50ae581489d593730f3f31c1119e1c5a128971f"
 dependencies = [
  "Inflector",
  "async-trait",
@@ -2287,7 +2287,7 @@ dependencies = [
 
 [[package]]
 name = "warpgrapher-actixweb"
-version = "0.11.1"
+version = "0.11.2"
 dependencies = [
  "actix-cors",
  "actix-http",
